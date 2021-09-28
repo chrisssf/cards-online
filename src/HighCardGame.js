@@ -7,6 +7,8 @@ let socket
 
 const HighCardGame =  ({ name, room, setRoom, setCurrentGame }) => {
 
+    const [ players, setPlayers ] = useState([])
+
     const ENDPOINT = 'localhost:5000'  // LOCAL
 
     useEffect(() => {
@@ -16,7 +18,18 @@ const HighCardGame =  ({ name, room, setRoom, setCurrentGame }) => {
 
         })
 
+        return () => {
+            socket.emit('disconnect')
+            socket.off()
+        }
     }, [ENDPOINT, name, room])
+
+    useEffect(() => {
+        socket.on('players', (message) => {
+            console.log(message);
+            setPlayers(message.users)
+        })
+    }, [])
 
 
     const handleGoHome = () => {
@@ -24,10 +37,16 @@ const HighCardGame =  ({ name, room, setRoom, setCurrentGame }) => {
         setCurrentGame("")
     }
 
+    const displayPlayers = () => {
+        return players.map(player => <p>{player.name}</p>)
+    }
+
     return (
         <>
             <p>high card game</p>
             <button onClick={() => handleGoHome()}> Home </button>
+            <p>Players currently in {room} are....</p>
+            {displayPlayers()}
         </>
     )
 }
