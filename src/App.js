@@ -1,25 +1,33 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from 'react'
+import HighCardGame from './HighCardGame'
+import Join from './Join'
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+const App = () => {
+
+    const [ name, setName ] = useState("")
+    const [ room, setRoom ] = useState("")
+    const [ currentGame, setCurrentGame ] = useState("")
+
+    return (
+
+        <>
+            <p>App!!!!</p>
+            {currentGame === "" && 
+                <Join 
+                    name={name} 
+                    setName={setName} 
+                    room={room} 
+                    setRoom={setRoom} 
+                    setCurrentGame={setCurrentGame}
+                />
+            }
+            {currentGame === "HighCardGame" && 
+                <HighCardGame 
+                setCurrentGame={setCurrentGame}
+                />
+            }
+        </>
+    )
 }
 
-export default App;
+export default App
