@@ -22,8 +22,11 @@ const App = () => {
                 />
             }
             {currentGame === "HighCardGame" && 
-                <HighCardGame 
-                setCurrentGame={setCurrentGame}
+                <HighCardGame
+                    name={name} 
+                    room={room}
+                    setRoom={setRoom} 
+                    setCurrentGame={setCurrentGame}
                 />
             }
         </>

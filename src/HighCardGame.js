@@ -1,14 +1,33 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import io from 'socket.io-client'
 import './HighCardGame.css'
 
-const HighCardGame = ({ setCurrentGame }) => {
 
-    
+let socket
+
+const HighCardGame =  ({ name, room, setRoom, setCurrentGame }) => {
+
+    const ENDPOINT = 'localhost:5000'  // LOCAL
+
+    useEffect(() => {
+
+        socket = io(ENDPOINT, {transports:['websocket']}) //newer => these both work
+        socket.emit('join', { name, room }, () => {
+
+        })
+
+    }, [ENDPOINT, name, room])
+
+
+    const handleGoHome = () => {
+        setRoom("")
+        setCurrentGame("")
+    }
 
     return (
         <>
             <p>high card game</p>
-            <button onClick={() => setCurrentGame("")}> Home </button>
+            <button onClick={() => handleGoHome()}> Home </button>
         </>
     )
 }
