@@ -1,10 +1,7 @@
 // things to add........
 // turn order or at least stop multiple cards being played
-// handle end round to determine who played highest hand
-// have a suit ranking system for ties, or trump suit
-// keep track of points for each player
 // fix 2 of same username issue
-// change start button to deal after starting and stop it being pressed mid game
+
 
 import React, { useCallback, useEffect, useState } from 'react'
 import io from 'socket.io-client'
@@ -19,11 +16,11 @@ const HighCardGame =  ({ name, room, setRoom, setCurrentGame }) => {
     const [ deck, setDeck ] = useState([])
     const [ hand, setHand ] = useState([])
     const [ cardPot, setCardPot ] = useState([])
+    const [ playerScores, setPlayerScores ] = useState([])
 
     const ENDPOINT = 'localhost:5000'  // LOCAL
 
     useEffect(() => {
-
         socket = io(ENDPOINT, {transports:['websocket']}) //newer => these both work
         socket.emit('join', { name, room }, () => {
 
@@ -37,9 +34,10 @@ const HighCardGame =  ({ name, room, setRoom, setCurrentGame }) => {
     }, [ENDPOINT, name, room])
 
     useEffect(() => {
-        socket.on('players', (message) => {
-            console.log(message);
-            setPlayers(message.users)
+        socket.on('players', ({ players }) => {
+            players.forEach((player, index) => player.playerNumber = index + 1)
+            console.log(players);
+            setPlayers(players)
         })
 
         socket.on('hand', ({ hand }) => {
@@ -49,6 +47,10 @@ const HighCardGame =  ({ name, room, setRoom, setCurrentGame }) => {
         socket.on('update-card-pot', ({updatedCardPot}) => {
             setCardPot(updatedCardPot)
         })
+
+        socket.on('update-scores', ({scores}) => {
+            setPlayerScores(scores)
+        })
     }, [])
 
     useEffect(() => {
@@ -56,6 +58,49 @@ const HighCardGame =  ({ name, room, setRoom, setCurrentGame }) => {
             dealCards()
         }
     },[deck])
+
+
+    useEffect(() => {
+        if(cardPot.length === players.length) handleEndRound()
+    }, [cardPot])
+
+    const handleEndRound = () => {
+        let highestCard = { value: 0 }
+        cardPot.forEach(card => {
+            if(card.value === "JACK")card.value = "11"
+            if(card.value === "QUEEN")card.value = "12"
+            if(card.value === "KING")card.value = "13"
+            if(card.value === "ACE")card.value = "14"
+
+            if(card.suit === "CLUBS")card.suitRank = 1
+            if(card.suit === "DIMONDS")card.suitRank = 2
+            if(card.suit === "HEARTS")card.suitRank = 3
+            if(card.suit === "SPADES")card.suitRank = 4
+
+            if(parseInt(card.value) > parseInt(highestCard.value)) highestCard = card
+            if(card.value === highestCard.value) {
+                if(card.suitRank > highestCard.suitRank) highestCard = card
+            }
+        })
+        console.log(highestCard.player);
+        console.log(highestCard);
+        console.log(players);
+        let roundWinner = null
+        players.forEach(player => {
+            if(player.id === highestCard.player) {
+                const winnerIndex = playerScores.findIndex(score =>  score.name === player.name)
+                console.log("index", winnerIndex);
+                let updateablePlayerScores = [...playerScores]
+                updateablePlayerScores[winnerIndex].score ++
+                setPlayerScores(updateablePlayerScores)
+                console.log("playerScores", playerScores);
+
+                // player.score ++
+                roundWinner = player.name
+            }
+        })
+        // if(roundWinner) alert(roundWinner + " has won this hand")
+    }
 
     const dealCards = () => {
         players.forEach((player, index) => {
@@ -76,6 +121,18 @@ const HighCardGame =  ({ name, room, setRoom, setCurrentGame }) => {
 
     const handleStartGame = () => {
 
+        let scores 
+
+        if(hand.length === 0) {
+            // doing scores this way means if someone drops out and comes back with same name their score will not be lost
+            scores = players.map(player => {
+                return {name: player.name, score: 0}
+            })
+            setPlayerScores(scores)
+        } else {
+            scores = playerScores
+        }
+
         let numberOfDecks = 1 
 
         fetch('https://deckofcardsapi.com/api/deck/new/shuffle?deck_count=' + numberOfDecks)
@@ -86,17 +143,24 @@ const HighCardGame =  ({ name, room, setRoom, setCurrentGame }) => {
             .then(results => {
                 console.log(results.cards);
                 setDeck(results.cards)
-                socket.emit('start-game', {players :players, deck: results.cards}, () => {
+                socket.emit('start-game', {players :players, deck: results.cards, scores: scores}, () => {
 
                 })
             })
 
         })
         .catch(err => console.log(err))
+
+
+        
     }
 
     const displayPlayers = () => {
-        return players.map(player => <p>{player.name}</p>)
+        return players.map(player => {
+            let scoreObject = playerScores.find(score =>  score.name === player.name) || {score: 0}
+            console.log("scoreObject", scoreObject);
+            return <p>{player.name} ---------- {scoreObject.score}</p>
+        })
     }
 
     const displayPotCards = () => {
@@ -121,13 +185,14 @@ const HighCardGame =  ({ name, room, setRoom, setCurrentGame }) => {
 
     return (
         <>
-            <p>high card game</p>
+            <p>Welcome <b>{name}</b> to High Card Game</p>
             <button onClick={() => handleGoHome()}> Home </button>
             <p>Played Cards</p>
             {displayPotCards()}
-            <p>Players currently in {room} are....</p>
+            <p>Players currently in <b>{room}</b> are....</p>
+            <p>Name ---------- Score</p>
             {displayPlayers()}
-            <button onClick={() => handleStartGame()}>Start</button>
+            <button disabled={hand.length > 0 && cardPot.length < players.length} onClick={() => handleStartGame()}>{hand.length === 0 ? "Start" : "Deal"}</button>
             <p>Player Hand</p>
             {displayCards()}
         </>
